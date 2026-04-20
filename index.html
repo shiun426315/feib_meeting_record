@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>錄音上傳 | 會議記錄服務</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --navy: #0f2744;
+    --navy-mid: #1a3a5c;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --blue-mid: #93c5fd;
+    --accent: #06b6d4;
+    --accent-light: #cffafe;
+    --text: #0f172a;
+    --text-2: #475569;
+    --text-3: #94a3b8;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --surface-3: #f1f5f9;
+    --border: #e2e8f0;
+    --border-focus: #2563eb;
+    --success: #059669;
+    --success-light: #d1fae5;
+    --error: #dc2626;
+    --error-light: #fee2e2;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    background: var(--surface-2);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: var(--navy);
+    padding: 20px 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(6,182,212,0.15);
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: 40px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(37,99,235,0.2);
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(6,182,212,0.2);
+    border: 1px solid rgba(6,182,212,0.4);
+    color: #67e8f9;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    position: relative; z-index: 1;
+  }
+  .header-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: #67e8f9;
+    border-radius: 50%;
+  }
+  .header-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.3;
+    position: relative; z-index: 1;
+  }
+  .header-sub {
+    font-size: 13px;
+    color: rgba(255,255,255,0.55);
+    margin-top: 4px;
+    position: relative; z-index: 1;
+  }
+
+  /* User info bar */
+  .user-bar {
+    margin: 16px 16px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .user-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--blue-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--blue);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-meta { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .user-status {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; color: var(--success);
+  }
+  .user-status::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+  }
+
+  /* Steps indicator */
+  .steps {
+    display: flex;
+    align-items: center;
+    padding: 16px 16px 0;
+    gap: 0;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+  .step-dot {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .step.active .step-dot { background: var(--blue); color: white; }
+  .step.done .step-dot { background: var(--success); color: white; }
+  .step.pending .step-dot { background: var(--surface-3); color: var(--text-3); }
+  .step-label { font-size: 10px; font-weight: 500; }
+  .step.active .step-label { color: var(--blue); }
+  .step.done .step-label { color: var(--success); }
+  .step.pending .step-label { color: var(--text-3); }
+  .step-line { flex: 1; height: 1px; background: var(--border); margin: 0 4px; }
+
+  /* Main content */
+  .content { padding: 16px; padding-bottom: 120px; }
+
+  /* Section card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .card-icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .card-icon.blue { background: var(--blue-light); }
+  .card-icon.cyan { background: var(--accent-light); }
+  .card-icon.green { background: var(--success-light); }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .card-subtitle { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .required-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--error);
+    background: var(--error-light);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .optional-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-3);
+    background: var(--surface-3);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* File upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+  .upload-zone:active, .upload-zone.drag-over {
+    border-color: var(--blue);
+    background: var(--blue-light);
+  }
+  .upload-zone.has-file {
+    border-color: var(--success);
+    background: var(--success-light);
+    border-style: solid;
+  }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; display: block; }
+  .upload-main { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .upload-sub { font-size: 12px; color: var(--text-3); }
+  .upload-formats {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .format-tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--surface-3);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+  }
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--success-light);
+    border: 1px solid #6ee7b7;
+    border-radius: var(--radius-sm);
+    margin-top: 10px;
+  }
+  .file-info-icon { font-size: 24px; flex-shrink: 0; }
+  .file-info-name { font-size: 13px; font-weight: 600; color: #065f46; word-break: break-all; }
+  .file-info-size { font-size: 11px; color: #059669; }
+  .file-remove {
+    margin-left: auto;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: rgba(5,150,105,0.2);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #065f46;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Form fields */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .label-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--blue);
+    flex-shrink: 0;
+  }
+  .label-opt { font-size: 10px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: var(--border-focus);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+  }
+  textarea { min-height: 80px; line-height: 1.6; }
+  textarea.tall { min-height: 120px; }
+
+  /* Format template box */
+  .format-template {
+    background: var(--navy);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #e2e8f0;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .format-template::before {
+    content: '預設格式範本';
+    position: absolute;
+    top: 6px; right: 10px;
+    font-family: inherit;
+    font-family: -apple-system, 'PingFang TC', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.05em;
+  }
+  .tpl-l1 { color: #67e8f9; font-weight: 700; }
+  .tpl-l2 { color: #a5f3fc; font-weight: 700; padding-left: 1em; }
+  .tpl-l3 { color: #bfdbfe; padding-left: 2em; }
+  .tpl-l4 { color: #c7d2fe; padding-left: 3em; }
+  .tpl-l5 { color: #ddd6fe; padding-left: 4em; }
+  .tpl-indent { color: rgba(255,255,255,0.35); font-size: 10px; }
+
+  .use-template-btn {
+    width: 100%;
+    padding: 9px;
+    background: transparent;
+    border: 1px dashed var(--blue-mid);
+    border-radius: var(--radius-sm);
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .use-template-btn:active { background: var(--blue-light); }
+  .use-template-btn.used {
+    border-color: var(--success);
+    color: var(--success);
+    border-style: solid;
+  }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 12px;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-text { font-size: 11px; color: var(--text-3); font-weight: 500; }
+
+  /* Submit bar */
+  .submit-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+    z-index: 100;
+  }
+  .submit-hint {
+    font-size: 11px;
+    color: var(--text-3);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.02em;
+  }
+  .submit-btn:active { transform: scale(0.98); background: var(--navy-mid); }
+  .submit-btn:disabled { background: var(--surface-3); color: var(--text-3); cursor: not-allowed; transform: none; }
+  .submit-btn .btn-icon { font-size: 18px; }
+
+  /* Loading overlay */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,39,68,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .overlay.show { opacity: 1; pointer-events: all; }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .overlay-text { font-size: 16px; color: white; font-weight: 600; }
+  .overlay-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 16px; left: 16px; right: 16px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 1000;
+    transform: translateY(-80px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toast.show { transform: translateY(0); }
+  .toast.error { background: var(--error); color: white; }
+  .toast.success { background: var(--success); color: white; }
+
+  /* Char counter */
+  .char-counter {
+    text-align: right;
+    font-size: 10px;
+    color: var(--text-3);
+    margin-top: 4px;
+  }
+  .char-counter.warn { color: var(--error); }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="overlay-text">正在提交...</div>
+  <div class="overlay-sub">請稍候，勿關閉頁面</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-badge">STEP 1 OF 3</div>
+  <div class="header-title">🎙 上傳錄音檔案</div>
+  <div class="header-sub">錄音 → 逐字稿 → 對話紀錄 → 會議記錄</div>
+</div>
+
+<!-- User bar -->
+<div class="user-bar" id="userBar">
+  <div class="user-avatar" id="userAvatar">─</div>
+  <div class="user-info">
+    <div class="user-name" id="userName">載入中...</div>
+    <div class="user-meta" id="userMeta">正在取得身份資訊</div>
+  </div>
+  <div class="user-status" id="userStatus">已綁定</div>
+</div>
+
+<!-- Steps -->
+<div class="steps">
+  <div class="step active">
+    <div class="step-dot">1</div>
+    <div class="step-label">上傳檔案</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step pending" id="step2">
+    <div class="step-dot">2</div>
+    <div class="step-label">填寫Prompt</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step pending" id="step3">
+    <div class="step-dot">3</div>
+    <div class="step-label">確認送出</div>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="content">
+
+  <!-- Section 1: Upload -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon blue">🎙</div>
+      <div>
+        <div class="card-title">上傳錄音檔案</div>
+        <div class="card-subtitle">支援 mp3、m4a、wav、ogg、flac</div>
+      </div>
+      <span class="required-badge">必填</span>
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="audioFile" accept=".mp3,.m4a,.wav,.ogg,.flac,audio/*" />
+      <span class="upload-icon">🎵</span>
+      <div class="upload-main">點擊選擇或拖曳音檔</div>
+      <div class="upload-sub">超過 15 分鐘將自動切段處理</div>
+      <div class="upload-formats">
+        <span class="format-tag">MP3</span>
+        <span class="format-tag">M4A</span>
+        <span class="format-tag">WAV</span>
+        <span class="format-tag">OGG</span>
+        <span class="format-tag">FLAC</span>
+      </div>
+    </div>
+
+    <div class="file-info" id="fileInfo" style="display:none;">
+      <span class="file-info-icon">🎵</span>
+      <div>
+        <div class="file-info-name" id="fileName"></div>
+        <div class="file-info-size" id="fileSize"></div>
+      </div>
+      <button class="file-remove" id="removeFile" onclick="removeFile()">✕</button>
+    </div>
+  </div>
+
+  <!-- Section 2: Background -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon cyan">📋</div>
+      <div>
+        <div class="card-title">會議背景</div>
+        <div class="card-subtitle">協助 AI 了解會議脈絡</div>
+      </div>
+      <span class="optional-badge">選填</span>
+    </div>
+
+    <div class="field">
+      <div class="label"><span class="label-dot"></span>會議名稱與日期</div>
+      <input type="text" id="meetingName" placeholder="例：2025年Q2業務檢討會議" maxlength="100" />
+    </div>
+    <div class="field">
+      <div class="label"><span class="label-dot"></span>會議背景說明</div>
+      <textarea id="background" placeholder="例：本次會議討論2025年第二季業務推展策略，參與者包含業務部主管及各區域負責人..." maxlength="500"></textarea>
+      <div class="char-counter" id="bgCounter">0 / 500</div>
+    </div>
+    <div class="field">
+      <div class="label"><span class="label-dot"></span>與會者</div>
+      <input type="text" id="attendees" placeholder="例：王主任（主持）、李副理、張專員" maxlength="200" />
+    </div>
+  </div>
+
+  <!-- Section 3: Structure -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon blue">🗂</div>
+      <div>
+        <div class="card-title">會議記錄架構</div>
+        <div class="card-subtitle">指定輸出的章節順序</div>
+      </div>
+      <span class="optional-badge">選填</span>
+    </div>
+
+    <div class="field">
+      <textarea id="structure" class="tall" placeholder="例：&#10;壹、主席致詞&#10;貳、上次會議決議追蹤&#10;參、本次議題討論&#10;一、業務推展策略&#10;二、預算調整規劃&#10;肆、臨時動議&#10;伍、決議事項&#10;陸、散會" maxlength="800"></textarea>
+      <div class="char-counter" id="structCounter">0 / 800</div>
+    </div>
+  </div>
+
+  <!-- Section 4: Format -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon green">📐</div>
+      <div>
+        <div class="card-title">會議記錄格式</div>
+        <div class="card-subtitle">標題層級與縮排規則</div>
+      </div>
+      <span class="optional-badge">可自訂</span>
+    </div>
+
+    <div class="format-template">
+      <div class="tpl-l1">壹、第一層標題（粗體，段落前空一行）</div>
+      <div class="tpl-l2">一、第二層標題（粗體）</div>
+      <div class="tpl-l3">（一）第三層（一般字重）</div>
+      <div class="tpl-l4">1. 第四層（一般字重）</div>
+      <div class="tpl-l5">(1) 第五層（一般字重）</div>
+      <br>
+      <div class="tpl-indent">縮排規則（懸掛縮排）：</div>
+      <div class="tpl-indent">壹→無縮排｜一→縮排1字</div>
+      <div class="tpl-indent">（一）→縮排2字｜1.→縮排3字｜(1)→縮排4字</div>
+    </div>
+
+    <button class="use-template-btn" id="useTemplateBtn" onclick="useTemplate()">
+      <span>↓</span> 套用預設格式範本
+    </button>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-text">或自行輸入格式說明</div>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="field">
+      <textarea id="format" class="tall" placeholder="若有特殊格式需求，請在此說明...&#10;例：無需分層架構，以條列方式呈現即可。" maxlength="600"></textarea>
+      <div class="char-counter" id="fmtCounter">0 / 600</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Submit bar -->
+<div class="submit-bar">
+  <div class="submit-hint" id="submitHint">請先上傳錄音檔案</div>
+  <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" disabled>
+    <span class="btn-icon">🚀</span> 送出並產製會議記錄
+  </button>
+</div>
+
+<script>
+const N8N_WEBHOOK_URL = 'https://your-n8n-domain.com/webhook/form-audio'; // ← 請替換
+
+let userId = '';
+let userProfile = {};
+let selectedFile = null;
+
+// Init LIFF
+async function initLiff() {
+  try {
+    await liff.init({ liffId: 'YOUR_LIFF_ID_AUDIO' }); // ← 請替換
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+
+    const profile = await liff.getProfile();
+    userId = profile.userId;
+    userProfile = profile;
+
+    // Display user info
+    const initials = profile.displayName.slice(0,2);
+    const avatar = document.getElementById('userAvatar');
+    if (profile.pictureUrl) {
+      avatar.innerHTML = `<img src="${profile.pictureUrl}" alt="">`;
+    } else {
+      avatar.textContent = initials;
+    }
+    document.getElementById('userName').textContent = profile.displayName;
+
+    // Fetch user info from backend
+    await fetchUserInfo(userId);
+  } catch (e) {
+    console.error('LIFF init error:', e);
+    document.getElementById('userName').textContent = '載入失敗';
+    document.getElementById('userMeta').textContent = '請重新開啟頁面';
+  }
+}
+
+async function fetchUserInfo(uid) {
+  try {
+    const res = await fetch(`${N8N_WEBHOOK_URL.replace('form-audio','user-info')}?userId=${uid}`);
+    const data = await res.json();
+    if (data && data.name) {
+      document.getElementById('userName').textContent = data.name;
+      document.getElementById('userMeta').textContent = `${data.unit}｜員編 ${data.empId}`;
+    } else {
+      document.getElementById('userMeta').textContent = userProfile.displayName;
+    }
+  } catch(e) {
+    document.getElementById('userMeta').textContent = userProfile.displayName || '';
+  }
+}
+
+// File handling
+document.getElementById('audioFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) handleFileSelect(file);
+});
+
+function handleFileSelect(file) {
+  const maxSize = 500 * 1024 * 1024; // 500MB
+  if (file.size > maxSize) {
+    showToast('檔案大小不可超過 500MB', 'error');
+    return;
+  }
+  selectedFile = file;
+  const zone = document.getElementById('uploadZone');
+  zone.classList.add('has-file');
+
+  document.getElementById('fileInfo').style.display = 'flex';
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatBytes(file.size);
+
+  // Update steps
+  document.getElementById('step2').className = 'step active';
+  checkSubmitReady();
+}
+
+function removeFile() {
+  selectedFile = null;
+  document.getElementById('audioFile').value = '';
+  document.getElementById('uploadZone').classList.remove('has-file');
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('step2').className = 'step pending';
+  checkSubmitReady();
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+// Template
+const DEFAULT_FORMAT = `標題層級與格式：
+第一層：壹、貳、參、肆…（粗體，段落前空一行）
+第二層：一、二、三…（粗體）
+第三層：（一）（二）（三）…（一般字重）
+第四層：1. 2. 3.（一般字重）
+第五層：(1) (2) (3)（一般字重）
+
+縮排規則（懸掛縮排，標號凸出、內文對齊）：
+- 第一層「壹、」：無縮排，內文從第三個字開始對齊
+- 第二層「一、」：縮排1字，內文對齊
+- 第三層「（一）」：縮排2字，內文對齊
+- 第四層「1.」：縮排3字，內文對齊
+- 第五層「(1)」：縮排4字，內文對齊`;
+
+function useTemplate() {
+  const ta = document.getElementById('format');
+  ta.value = DEFAULT_FORMAT;
+  updateCounter('format', 'fmtCounter', 600);
+  const btn = document.getElementById('useTemplateBtn');
+  btn.textContent = '✓ 已套用預設格式';
+  btn.classList.add('used');
+  ta.focus();
+}
+
+// Char counters
+function updateCounter(fieldId, counterId, max) {
+  const len = document.getElementById(fieldId).value.length;
+  const el = document.getElementById(counterId);
+  el.textContent = `${len} / ${max}`;
+  el.classList.toggle('warn', len > max * 0.9);
+}
+
+['background','structure','format'].forEach(id => {
+  const counterMap = { background:'bgCounter', structure:'structCounter', format:'fmtCounter' };
+  const maxMap = { background:500, structure:800, format:600 };
+  document.getElementById(id).addEventListener('input', () => {
+    updateCounter(id, counterMap[id], maxMap[id]);
+    if (id === 'structure') document.getElementById('step3').className = 'step active';
+  });
+});
+
+// Submit readiness
+function checkSubmitReady() {
+  const btn = document.getElementById('submitBtn');
+  const hint = document.getElementById('submitHint');
+  if (selectedFile) {
+    btn.disabled = false;
+    hint.textContent = '準備就緒，點擊送出後請稍候收信';
+  } else {
+    btn.disabled = true;
+    hint.textContent = '請先上傳錄音檔案';
+  }
+}
+
+// Submit
+async function handleSubmit() {
+  if (!selectedFile) { showToast('請先選擇錄音檔案', 'error'); return; }
+
+  const overlay = document.getElementById('overlay');
+  overlay.classList.add('show');
+
+  try {
+    const formData = new FormData();
+    formData.append('userId', userId);
+    formData.append('displayName', userProfile.displayName || '');
+    formData.append('meetingName', document.getElementById('meetingName').value);
+    formData.append('background', document.getElementById('background').value);
+    formData.append('attendees', document.getElementById('attendees').value);
+    formData.append('structure', document.getElementById('structure').value);
+    formData.append('format', document.getElementById('format').value || DEFAULT_FORMAT);
+    formData.append('inputType', 'audio');
+    formData.append('audioFile', selectedFile);
+
+    const res = await fetch(N8N_WEBHOOK_URL, { method: 'POST', body: formData });
+
+    if (res.ok) {
+      overlay.classList.remove('show');
+      showToast('✓ 已送出！請稍後收信', 'success');
+      setTimeout(() => {
+        if (liff.isInClient()) liff.closeWindow();
+      }, 2000);
+    } else {
+      throw new Error(`Server error: ${res.status}`);
+    }
+  } catch(e) {
+    overlay.classList.remove('show');
+    showToast('送出失敗，請稍後再試', 'error');
+    console.error(e);
+  }
+}
+
+// Toast
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => { t.classList.remove('show'); }, 3000);
+}
+
+// Drag & drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFileSelect(file);
+});
+
+// Boot
+window.addEventListener('DOMContentLoaded', initLiff);
+</script>
+</body>
+</html>
