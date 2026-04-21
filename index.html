@@ -1,24 +1,36 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LIFF 表單</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link rel="stylesheet" href="./style.css" />
-</head>
-<body>
-  <div class="wrap">
-    <h1 id="title">LIFF 表單</h1>
-    <p id="displayName">讀取中...</p>
-    <p id="userId">讀取中...</p>
+僅開放能檢視評論的權限：
+ 
+IOS
+**需有Admin / Account Holder 才能建金鑰。操作步驟如下：
+登入App Store Connect(https://appstoreconnect.apple.com/)
+左側選單->Users and Access
+整合->App Store Connect API->Team Keys
+點+，Generate API Key，名稱：n8n-評論監控，存取權限：選 Customer Support
+ 產出後，請提供以下 3 項資訊給 AI 團隊：
 
-    <form id="form">
-      <input type="text" id="meetingTitle" placeholder="會議標題" />
-      <button type="submit">送出</button>
-    </form>
-  </div>
+✅ 頁面上方的 Issuer ID（所有金鑰共用）
 
-  <script src="./app.js"></script>
-</body>
-</html>
+✅ 該金鑰的Key ID
+
+✅ 點「下載」取得 .p8 檔案（⚠️ 只能下載一次）
+Google Play
+操作步驟如下：
+登入 Google Play Console(https://play.google.com/console/)
+左側選單 → 設定（Settings）→ API 存取權（API access）
+
+**如果出現「連結 Google Cloud 專案」提示，需先連結專案編號「721044081001」或搜尋專案名稱 n8n-app-review（或選「現有專案」）
+
+**如果已連結，往下找到 **服務帳戶** 區塊
+點選管理 Play Console 權限(或邀請新使用者)，並輸入 AI 團隊提供的 email：n8n-review-bot@xxxxx.iam.gserviceaccount.com
+權限設定
+
+帳戶權限頁籤：全部不勾
+> 切到應用程式頁籤 → 選擇要監控的 App（如 Bankee+）
+> 只勾選：
+
+ ✅ 檢視應用程式資訊 （View app information）— 基本讀取
+
+✅ 檢視評分、評論和回覆（View ratings, reviews, and replies）
+> 其餘全部**不勾**
+點 邀請使用者 → 完成
+ 
