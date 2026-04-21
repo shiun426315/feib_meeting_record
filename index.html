@@ -671,7 +671,7 @@ let selectedFile = null;
 // Init LIFF
 async function initLiff() {
   try {
-    await liff.init({ liffId: 'YOUR_LIFF_ID_AUDIO' }); // ← 請替換
+    await liff.init({ liffId: '2009839673-vK4YtLar' }); // ← 請替換
     if (!liff.isLoggedIn()) { liff.login(); return; }
 
     const profile = await liff.getProfile();
